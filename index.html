@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>نظام كشف دوام الموزعين الخارجيين | Naif Food</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/linways/table-to-excel@1.0.4/dist/tableToExcel.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <link rel="icon" href="https://i.postimg.cc/NM2zJWZD/NAIF-LOGO.jpg" type="image/jpeg">
+    <style>
+        :root {
+            --red: #9E1B1B; --red-dark: #7A0E0E; --gold: #D4AF37; --gold-light: #F1C40F;
+            --bg-color: #f4f6f9; --surface: #ffffff; --text-main: #2C1107; --text-muted: #6c757d;
+            --border-color: #dee2e6; --success: #1D8348; --danger: #dc3545; --info: #0dcaf0;
+            --shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); }
+
+        /* Header Layout: Logo on Right, Text on Left */
+        header {
+            background: linear-gradient(135deg, var(--red-dark), var(--red)); color: white;
+            padding: 15px 30px; display: flex; justify-content: flex-start; align-items: center; gap: 20px;
+            box-shadow: var(--shadow); position: sticky; top: 0; z-index: 100;
+        }
+        .header-logo img { height: 60px; border-radius: 50%; border: 3px solid var(--gold); background: #fff; transition: transform 0.3s;}
+        .header-logo img:hover { transform: scale(1.05); }
+        .header-title { flex: 1; }
+        .header-title h1 { font-size: 22px; font-weight: 900; color: var(--gold-light); margin-bottom: 5px;}
+        .header-title p { font-size: 14px; opacity: 0.9; }
+
+        /* Tabs Navigation */
+        .tabs {
+            display: flex; background: var(--surface); border-bottom: 2px solid var(--border-color);
+            padding: 0 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 15px 25px; border: none; background: transparent; font-size: 16px;
+            font-weight: 700; color: var(--text-muted); cursor: pointer; transition: 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        .tab-btn:hover { color: var(--red); }
+        .tab-btn.active { color: var(--red); border-bottom-color: var(--gold); }
+
+        /* Main Content */
+        .container { max-width: 1400px; margin: 30px auto; padding: 0 20px; }
+        .tab-content { display: none; animation: fadeIn 0.4s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Cards & Forms */
+        .card { background: var(--surface); border-radius: 12px; padding: 25px; box-shadow: var(--shadow); margin-bottom: 25px; border-top: 4px solid var(--gold); }
+        .card-header { font-size: 18px; font-weight: 900; margin-bottom: 20px; color: var(--red-dark); display: flex; justify-content: space-between; align-items: center;}
+        
+        .row { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px; }
+        .col { flex: 1; min-width: 250px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 14px; font-weight: 700; color: var(--text-muted); }
+        .form-control { 
+            padding: 10px 15px; border: 1px solid var(--border-color); border-radius: 8px; 
+            font-size: 15px; transition: 0.3s; background: #fafafa; outline: none; font-family: inherit;
+        }
+        .form-control:focus { border-color: var(--gold); background: #fff; box-shadow: 0 0 0 3px rgba(212,175,55,0.2); }
+        .form-control[readonly] { background-color: #e9ecef; cursor: not-allowed; font-weight: bold; }
+
+        /* Buttons */
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit;}
+        .btn-primary { background: linear-gradient(135deg, var(--red), var(--red-dark)); color: white; }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(158,27,27,0.3);}
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #145a32; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-gold { background: var(--gold); color: #fff; }
+        .btn-info { background: var(--info); color: #000; }
+        .btn-outline { background: #fff; border: 2px solid var(--red); color: var(--red); }
+        .btn-outline:hover { background: var(--red); color: #fff; }
+
+        /* Tables */
+        .table-responsive { overflow-x: auto; width: 100%; border-radius: 8px; border: 1px solid var(--border-color); }
+        table { width: 100%; border-collapse: collapse; background: var(--surface); text-align: center; }
+        th { background: #f8f9fa; color: var(--red-dark); font-weight: 900; padding: 12px 10px; border-bottom: 2px solid var(--border-color); white-space: nowrap; font-size: 14px;}
+        td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); color: var(--text-main); vertical-align: middle; font-size: 14px;}
+        tr:hover { background: #fdfbf7; }
+
+        /* Settings Lists */
+        .settings-list { list-style: none; max-height: 400px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; }
+        .settings-item { display: flex; flex-direction: column; padding: 12px; border-bottom: 1px solid #eee; background: #fff; margin-bottom: 5px; border-radius: 6px; border: 1px solid #f1f1f1;}
+        .settings-item-header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: var(--red-dark); margin-bottom: 8px;}
+        .settings-item-details { font-size: 13px; color: #555; display: flex; gap: 15px;}
+        .action-btns { display: flex; gap: 5px; }
+        .action-btns button { padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; color: white; }
+        .btn-edit { background: #F39C12; }
+        .btn-del { background: #E74C3C; }
+
+        /* --- Hidden PDF Export Layout --- */
+        .export-wrapper { display: none; }
+        /* Reduced width by ~15% to prevent clipping (950px down from 1123px) */
+        .pdf-export-container { width: 950px; padding: 25px; background: white; font-family: 'Cairo', sans-serif; direction: rtl; color: black; margin: 0 auto;}
+        
+        .pdf-header { display: flex; justify-content: center; align-items: center; margin-bottom: 15px; position: relative; }
+        .pdf-logo { position: absolute; right: 0; top: 0; width: 100px; height: 100px; object-fit: contain;}
+        .pdf-title-box { text-align: center; }
+        .pdf-title-box h2 { color: #000; margin: 0; font-size: 22px; font-weight: 900;}
+        .pdf-title-box h3 { color: #000; margin: 8px 0 0 0; font-size: 18px; }
+        
+        .pdf-table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 15px; text-align: center;}
+        /* Reduced row height in PDF */
+        .pdf-table th, .pdf-table td { border: 1px solid #000; padding: 5px 3px; font-size: 13px; }
+        /* Enforce background colors for printing */
+        .pdf-table th { background-color: #f2f2f2 !important; font-weight: 900; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .pdf-table td { font-weight: 600; }
+        
+        .pdf-footer { display: flex; justify-content: space-between; margin-top: 50px; text-align: center; font-weight: bold; }
+        /* Updated 4 signatures layout */
+        .pdf-sign-box { width: 22%; border-top: 2px dotted #000; padding-top: 8px; font-size: 14px;}
+        .pdf-credits { text-align: center; font-size: 11px; color: #555; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;}
+        
+        /* Page break for bulk PDF export */
+        .page-break { page-break-before: always; }
+
+        /* Signature */
+        .signature-card { position: fixed; bottom: 20px; left: 20px; background: linear-gradient(135deg, #FF6E00, #2196F3); color: white; padding: 10px 15px; border-radius: 8px; box-shadow: 0 8px 25px rgba(0,0,0,0.3); font-size: 12px; font-weight: 600; z-index: 1000; text-decoration: none; text-align: center;}
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-logo">
+            <a href="https://ordernaif.com" target="_blank" title="زيارة موقع نايف"><img src="https://i.postimg.cc/NM2zJWZD/NAIF-LOGO.jpg" alt="Naif Logo" crossorigin="anonymous"></a>
+        </div>
+        <div class="header-title">
+            <h1>شركة نايف للأغذية</h1>
+            <p>إدارة الموزعين الخارجيين | نظام الكشوفات والتقارير</p>
+        </div>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab('entry')">📝 إدخال كشف الدوام</button>
+        <button class="tab-btn" onclick="openTab('archive')">📁 الأرشيف والتصدير المجمع</button>
+        <button class="tab-btn" onclick="openTab('reports')">📊 تقارير المطاعم</button>
+        <button class="tab-btn" onclick="openTab('settings')">⚙️ الإعدادات (الشركات والأسعار)</button>
+    </div>
+
+    <div class="container">
+        
+        <div id="entry" class="tab-content active">
+            <div class="card">
+                <div class="card-header">1. بيانات الكشف الأساسية</div>
+                <div class="row">
+                    <div class="col form-group">
+                        <label>الشركة الخارجية</label>
+                        <input type="text" id="regCompany" class="form-control" list="companiesList" placeholder="اختر أو ابحث عن الشركة..." onchange="autoFillRate()">
+                    </div>
+                    <div class="col form-group">
+                        <label>شهر الدوام</label>
+                        <input type="month" id="regMonth" class="form-control">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">2. إدخال بيانات الموزعين</div>
+                <div class="row" style="background: #fdfbf7; padding: 20px; border-radius: 8px; border: 1px dashed var(--gold); align-items: flex-end;">
+                    <div class="form-group" style="flex: 2; min-width: 200px;">
+                        <label>اسم الموزع</label>
+                        <input type="text" id="empName" class="form-control" placeholder="اكتب اسم الموزع...">
+                    </div>
+                    <div class="form-group" style="flex: 2; min-width: 200px;">
+                        <label>اسم المطعم</label>
+                        <input type="text" id="empBranch" class="form-control" list="branchesList" placeholder="اختر المطعم...">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 100px;">
+                        <label>المركبة</label>
+                        <select id="empVehicle" class="form-control" onchange="autoFillRate()">
+                            <option value="سيارة">سيارة</option>
+                            <option value="سيكل">سيكل</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 100px;">
+                        <label>أيام الدوام</label>
+                        <input type="number" id="empDays" class="form-control" min="0" oninput="calculateRow(false)">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 100px;">
+                        <label>الساعات/يوم</label>
+                        <input type="number" id="empHours" class="form-control" value="12" min="0" oninput="calculateRow(false)">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 120px;">
+                        <label>إجمالي الساعات</label>
+                        <input type="number" id="empTotalHours" class="form-control" oninput="calculateRow(true)" style="border-color: var(--info);">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 100px;">
+                        <label>أجر الساعة</label>
+                        <input type="number" id="empRate" class="form-control" step="0.001" oninput="calculateRow(true)">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 120px;">
+                        <label>الراتب المستحق</label>
+                        <input type="number" id="empSalary" class="form-control" readonly style="color:var(--danger);">
+                    </div>
+                    <div class="form-group" style="flex: 2; min-width: 150px;">
+                        <label>ملاحظات</label>
+                        <input type="text" id="empNotes" class="form-control" placeholder="ملاحظات...">
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary" onclick="addRow()" style="height: 44px; width: 100px;">➕ إضافة</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive" style="margin-top: 25px;">
+                    <table id="entryTable">
+                        <thead>
+                            <tr>
+                                <th width="5%">م</th>
+                                <th width="15%">اسم الموزع</th>
+                                <th width="15%">اسم المطعم</th>
+                                <th width="8%">المركبة</th>
+                                <th width="8%">أيام الدوام</th>
+                                <th width="8%">الساعات</th>
+                                <th width="10%">إجمالي الساعات</th>
+                                <th width="8%">أجر الساعة</th>
+                                <th width="10%">الراتب المستحق</th>
+                                <th width="10%">ملاحظات</th>
+                                <th width="5%">إجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody id="entryTbody"></tbody>
+                    </table>
+                </div>
+                
+                <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
+                    <div style="font-size: 20px; font-weight: 900;">إجمالي الرواتب للكشف: <span id="grandTotalSalary" style="color: var(--danger);">0.000</span> د.ك</div>
+                    <button class="btn btn-success" onclick="saveRecord()" style="font-size: 16px;">💾 حفظ الكشف في الأرشيف</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="archive" class="tab-content">
+            <div class="card" style="border-top-color: var(--info);">
+                <div class="card-header">📦 تصدير مجمع لبيانات شهر كامل</div>
+                <div class="row" style="align-items: flex-end;">
+                    <div class="form-group col" style="max-width: 300px;">
+                        <label>اختر الشهر المطلوب تصديره</label>
+                        <input type="month" id="bulkMonth" class="form-control">
+                    </div>
+                    <div class="form-group col" style="flex-direction: row; gap: 10px; align-items: flex-end;">
+                        <button class="btn btn-primary" onclick="exportBulkPDF('single')">📄 كل الشركات في PDF واحد</button>
+                        <button class="btn btn-outline" onclick="exportBulkPDF('separate')">📂 PDF منفصل لكل شركة</button>
+                        <button class="btn btn-success" onclick="exportBulkExcel()">📊 Excel شيتات متعددة</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">الكشوفات المحفوظة تفصيلياً</div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>رقم الكشف</th>
+                                <th>الشركة الخارجية</th>
+                                <th>عن شهر</th>
+                                <th>عدد الموزعين</th>
+                                <th>إجمالي الرواتب</th>
+                                <th>إجراءات التصدير والتعديل</th>
+                            </tr>
+                        </thead>
+                        <tbody id="archiveTbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="reports" class="tab-content">
+            <div class="card">
+                <div class="card-header">📊 تقرير تفصيلي لرواتب مطعم محدد من جميع الشركات</div>
+                <div class="row" style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd; align-items: flex-end;">
+                    <div class="form-group col">
+                        <label>اختر المطعم (الفرع)</label>
+                        <input type="text" id="reportBranch" class="form-control" list="branchesList" placeholder="اسم المطعم...">
+                    </div>
+                    <div class="form-group col">
+                        <label>اختر الشهر</label>
+                        <input type="month" id="reportMonth" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary" onclick="generateBranchReport()" style="height: 44px;">🔍 عرض التقرير</button>
+                    </div>
+                </div>
+
+                <div id="reportResultArea" style="display: none; margin-top: 20px;">
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px; justify-content: flex-end;">
+                        <button class="btn btn-success" onclick="exportReportExcel()"><span style="font-size:18px;">📊</span> تصدير إكسل (XLSX)</button>
+                        <button class="btn btn-danger" onclick="exportReportPDF()"><span style="font-size:18px;">📄</span> تصدير PDF</button>
+                    </div>
+                    
+                    <div class="table-responsive" id="reportTableContainer">
+                        <table id="reportExportTable" data-cols-width="5,20,15,15,15,10,10,15,20">
+                            <thead>
+                                <tr>
+                                    <th colspan="9" style="background-color: #9E1B1B; color: #ffffff; font-size: 18px; font-weight: bold; text-align: center; height: 40px;" id="reportTableTitle">تقرير المطعم</th>
+                                </tr>
+                                <tr>
+                                    <th style="background-color: #D4AF37; color: #000; font-weight: bold;">م</th>
+                                    <th style="background-color: #D4AF37; color: #000; font-weight: bold;">اسم الموزع</th>
+                                    <th style="background-color: #D4AF37; color: #000; font-weight: bold;">الشركة التابع لها</th>
+                                    <th style="background-color: #D4AF37; color: #000; font-weight: bold;">المركبة</th>
+                                    <th style="background-color: #D4AF37; color: #000; font-weight: bold;">أيام الدوام</th>
+                                    <th style="background-color: #D4AF37; color: #000; font-weight: bold;">إجمالي الساعات</th>
+                                    <th style="background-color: #D4AF37; color: #000; font-weight: bold;">أجر الساعة</th>
+                                    <th style="background-color: #D4AF37; color: #000; font-weight: bold;">الراتب المستحق</th>
+                                    <th style="background-color: #D4AF37; color: #000; font-weight: bold;">ملاحظات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportTbody"></tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="7" style="background-color: #f1f1f1; text-align: left; font-weight: bold; color: #9E1B1B;">إجمالي الرواتب للمطعم:</th>
+                                    <th id="reportGrandTotal" style="background-color: #f1f1f1; font-weight: bold; color: #dc3545;">0.000</th>
+                                    <th style="background-color: #f1f1f1;"></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings" class="tab-content">
+            <div class="row">
+                <div class="col card" style="flex: 2;">
+                    <div class="card-header">قاعدة بيانات الشركات الخارجية والأسعار</div>
+                    <div class="row" style="background: #fdfbf7; padding: 15px; border-radius: 8px; border: 1px dashed var(--gold);">
+                        <div class="form-group col" style="min-width: 150px;">
+                            <label>اسم الشركة</label>
+                            <input type="text" id="setCompName" class="form-control" placeholder="شركة جديدة أو تعديل...">
+                        </div>
+                        <div class="form-group col" style="min-width: 100px;">
+                            <label>سعر ساعة السيارة</label>
+                            <input type="number" id="setCompCar" class="form-control" step="0.001" value="1.200">
+                        </div>
+                        <div class="form-group col" style="min-width: 100px;">
+                            <label>سعر ساعة السيكل</label>
+                            <input type="number" id="setCompBike" class="form-control" step="0.001" value="1.000">
+                        </div>
+                        <div class="form-group" style="justify-content: flex-end;">
+                            <input type="hidden" id="setCompOldName">
+                            <button class="btn btn-primary" onclick="saveCompany()" id="btnSaveComp">إضافة / تحديث</button>
+                        </div>
+                    </div>
+                    <ul class="settings-list" id="companiesUl" style="margin-top: 15px;"></ul>
+                </div>
+
+                <div class="col card" style="flex: 1;">
+                    <div class="card-header">قاعدة بيانات المطاعم والفروع</div>
+                    <div class="form-group" style="flex-direction: row; margin-bottom: 15px;">
+                        <input type="text" id="setBranchName" class="form-control" placeholder="اسم المطعم..." style="flex: 1;">
+                        <input type="hidden" id="setBranchOldName">
+                        <button class="btn btn-primary" onclick="saveBranch()" id="btnSaveBranch">حفظ</button>
+                    </div>
+                    <ul class="settings-list" id="branchesUl"></ul>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn btn-danger" onclick="clearAllData()">⚠️ مسح جميع بيانات البرنامج وإعادته لضبط المصنع</button>
+            </div>
+        </div>
+
+    </div>
+
+    <datalist id="companiesList"></datalist>
+    <datalist id="branchesList"></datalist>
+
+    <div class="export-wrapper" id="pdf-template-master">
+        </div>
+
+    <a href="https://yasser-q8.github.io/myprofile/#" class="signature-card" target="_blank" rel="noopener noreferrer">
+        <div>Yasser Elkhateeb</div><div>مطور البرنامج 67011143</div>
+    </a>
+
+    <script>
+        // --- Full Data Structure (All Branches & Companies) ---
+        const initialCompanyNames = [
+            "شركة فاست رايدر", "شركة ستار دست", "شركة بن مرسان", "شركة العروبة", "شركة النجم الذهبي", 
+            "شركة البحار - العمالة", "شركة أي بي اكس", "شركة صبحان", "شركة البحار - توصيل", "شركة صبحان - عمالة", 
+            "شركة الشرق الاوسط", "شركة تلي كاب", "شركة لبرد", "شركة افاق", "شركة توصيلة", "طلبات", "دليفرو"
+        ];
+        
+        // Map all initial companies to default rates (Car: 1.200, Bike: 1.000)
+        const defaultCompanies = initialCompanyNames.map(name => ({ name: name, rateCar: 1.200, rateBike: 1.000 }));
+        
+        const defaultBranches = [
+            "اسواق القرين", "الجابرية بنت الديك", "الجابرية تكا و فرايد", "الجهراء - ليالي الشرق", "الجهراء - مجمع مكة", 
+            "الجهراء الزويخ", "الجهراء الصناعية", "الخيران أوتليت", "الخيران أويا", "الوفرة الخيول", "الدسمة وبنيد القار", 
+            "الرحاب", "الرقة", "الرقعي", "الري", "السندباد", "الشرق", "الشويخ واره", "الصليبية", "الضباعية", 
+            "العارضية الحرفية", "الفحاحيل", "الفروانية", "الفروانية فرع 2", "الفنطاس", "الفيحاء", "القادسية",
+            "سيد ياسين", "النافورة", "خيطان العصيمي", "السالمية", "جمعية أبو فطيرة", "صباح السالم - العرين", "حولي الترفيهي",
+            "المطار", "المنقف", "أبوحليفة", "جمعية الزهراء التعاونية", "جمعية الشهداء", "جمعية الصليبية", 
+            "جمعية العدان والقصور", "جمعية القيروان", "جمعية الوفرة", "جمعية مدينة جابر الأحمد", "سلوى", "سوق الجليب", 
+            "شارع البحرين", "شرق الاحمدي", "صباح السالم", "غرب أبو فطيرة الحرفية", "كبد", "مارينا مول - عالم المارينا", 
+            "مجمع الافنيوز", "مجمع الكوت", "مدينة سعد العبد الله", "مدينة صباح الاحمد", "مشرف", "مول 360", "نادي الصليبخات", "هدية"
+        ];
+        
+        // Using _v4 to ensure clean state load for the new comprehensive lists
+        let appData = {
+            companies: JSON.parse(localStorage.getItem('naif_comps_v4')) || defaultCompanies,
+            branches: JSON.parse(localStorage.getItem('naif_brns_v4')) || defaultBranches,
+            records: JSON.parse(localStorage.getItem('naif_recs_v4')) || []
+        };
+
+        let currentEntryRows = [];
+        let editingRecordId = null;
+
+        // --- Init ---
+        window.onload = () => {
+            saveState(); 
+            updateDatalists();
+            renderSettings();
+            renderArchive();
+            
+            const now = new Date();
+            const currMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+            document.getElementById('regMonth').value = currMonth;
+            document.getElementById('reportMonth').value = currMonth;
+            document.getElementById('bulkMonth').value = currMonth;
+        };
+
+        function saveState() {
+            localStorage.setItem('naif_comps_v4', JSON.stringify(appData.companies));
+            localStorage.setItem('naif_brns_v4', JSON.stringify(appData.branches));
+            localStorage.setItem('naif_recs_v4', JSON.stringify(appData.records));
+        }
+
+        function formatMonthName(mStr) {
+            if(!mStr) return "";
+            const [y, m] = mStr.split('-');
+            const monthsAr = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+            return `${monthsAr[parseInt(m)-1]} ${y}`;
+        }
+
+        function openTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+            if(tabId === 'archive') renderArchive();
+        }
+
+        // --- Settings Management ---
+        function updateDatalists() {
+            document.getElementById('companiesList').innerHTML = appData.companies.map(c => `<option value="${c.name}">`).join('');
+            document.getElementById('branchesList').innerHTML = appData.branches.map(b => `<option value="${b}">`).join('');
+        }
+
+        function renderSettings() {
+            document.getElementById('companiesUl').innerHTML = appData.companies.map(c => `
+                <li class="settings-item">
+                    <div class="settings-item-header">
+                        <span>🏢 ${c.name}</span>
+                        <div class="action-btns">
+                            <button class="btn-edit" onclick="editCompForm('${c.name}', ${c.rateCar}, ${c.rateBike})">تعديل</button>
+                            <button class="btn-del" onclick="deleteCompany('${c.name}')">حذف</button>
+                        </div>
+                    </div>
+                    <div class="settings-item-details">
+                        <span>🚗 سيارة: ${c.rateCar.toFixed(3)} د.ك</span>
+                        <span>🏍️ سيكل: ${c.rateBike.toFixed(3)} د.ك</span>
+                    </div>
+                </li>
+            `).join('');
+            
+            document.getElementById('branchesUl').innerHTML = appData.branches.map(b => `
+                <li class="settings-item">
+                    <div class="settings-item-header" style="margin-bottom:0;">
+                        <span>📍 ${b}</span>
+                        <div class="action-btns">
+                            <button class="btn-edit" onclick="editBranchForm('${b}')">تعديل</button>
+                            <button class="btn-del" onclick="deleteBranch('${b}')">حذف</button>
+                        </div>
+                    </div>
+                </li>
+            `).join('');
+        }
+
+        function editCompForm(name, rCar, rBike) {
+            document.getElementById('setCompOldName').value = name;
+            document.getElementById('setCompName').value = name;
+            document.getElementById('setCompCar').value = rCar;
+            document.getElementById('setCompBike').value = rBike;
+            document.getElementById('btnSaveComp').innerText = 'تحديث الشركة';
+        }
+
+        function saveCompany() {
+            const oldName = document.getElementById('setCompOldName').value;
+            const newName = document.getElementById('setCompName').value.trim();
+            const rCar = parseFloat(document.getElementById('setCompCar').value) || 0;
+            const rBike = parseFloat(document.getElementById('setCompBike').value) || 0;
+
+            if(!newName) return alert('أدخل اسم الشركة');
+
+            if (oldName) {
+                const idx = appData.companies.findIndex(c => c.name === oldName);
+                if (idx !== -1) {
+                    appData.companies[idx] = { name: newName, rateCar: rCar, rateBike: rBike };
+                    appData.records.forEach(r => { if(r.company === oldName) r.company = newName; });
+                }
+            } else {
+                if(appData.companies.find(c => c.name === newName)) return alert('الشركة موجودة مسبقاً!');
+                appData.companies.push({ name: newName, rateCar: rCar, rateBike: rBike });
+            }
+
+            document.getElementById('setCompOldName').value = '';
+            document.getElementById('setCompName').value = '';
+            document.getElementById('setCompCar').value = '1.200';
+            document.getElementById('setCompBike').value = '1.000';
+            document.getElementById('btnSaveComp').innerText = 'إضافة / تحديث';
+            
+            saveState(); updateDatalists(); renderSettings(); autoFillRate();
+        }
+
+        function deleteCompany(name) {
+            if(confirm('حذف الشركة؟')) {
+                appData.companies = appData.companies.filter(c => c.name !== name);
+                saveState(); updateDatalists(); renderSettings();
+            }
+        }
+
+        function editBranchForm(name) {
+            document.getElementById('setBranchOldName').value = name;
+            document.getElementById('setBranchName').value = name;
+            document.getElementById('btnSaveBranch').innerText = 'تحديث';
+        }
+
+        function saveBranch() {
+            const oldName = document.getElementById('setBranchOldName').value;
+            const newName = document.getElementById('setBranchName').value.trim();
+
+            if(!newName) return alert('أدخل اسم المطعم');
+
+            if(oldName) {
+                const idx = appData.branches.indexOf(oldName);
+                if(idx !== -1) {
+                    appData.branches[idx] = newName;
+                    appData.records.forEach(r => {
+                        r.rows.forEach(row => { if(row.branch === oldName) row.branch = newName; });
+                    });
+                }
+            } else {
+                if(appData.branches.includes(newName)) return alert('المطعم موجود!');
+                appData.branches.push(newName);
+            }
+
+            document.getElementById('setBranchOldName').value = '';
+            document.getElementById('setBranchName').value = '';
+            document.getElementById('btnSaveBranch').innerText = 'حفظ';
+            saveState(); updateDatalists(); renderSettings();
+        }
+
+        function deleteBranch(name) {
+            if(confirm('حذف المطعم؟')) {
+                appData.branches = appData.branches.filter(b => b !== name);
+                saveState(); updateDatalists(); renderSettings();
+            }
+        }
+
+        // --- Data Entry Logic ---
+        function autoFillRate() {
+            const compName = document.getElementById('regCompany').value;
+            const vehicle = document.getElementById('empVehicle').value;
+            const company = appData.companies.find(c => c.name === compName);
+            
+            if(company) {
+                document.getElementById('empRate').value = (vehicle === 'سيارة' ? company.rateCar : company.rateBike).toFixed(3);
+                calculateRow(true); 
+            }
+        }
+
+        function calculateRow(fromTotalField = false) {
+            const days = parseFloat(document.getElementById('empDays').value) || 0;
+            const hoursPerDay = parseFloat(document.getElementById('empHours').value) || 0;
+            const rate = parseFloat(document.getElementById('empRate').value) || 0;
+
+            let totalHours = 0;
+            if(!fromTotalField) {
+                totalHours = days * hoursPerDay;
+                document.getElementById('empTotalHours').value = totalHours;
+            } else {
+                totalHours = parseFloat(document.getElementById('empTotalHours').value) || 0;
+            }
+
+            const salary = totalHours * rate;
+            document.getElementById('empSalary').value = salary.toFixed(3);
+        }
+
+        function addRow() {
+            const name = document.getElementById('empName').value.trim();
+            const branch = document.getElementById('empBranch').value.trim();
+            const vehicle = document.getElementById('empVehicle').value;
+            const days = document.getElementById('empDays').value;
+            const hours = document.getElementById('empHours').value;
+            const totalHours = document.getElementById('empTotalHours').value;
+            const rate = parseFloat(document.getElementById('empRate').value).toFixed(3);
+            const salary = parseFloat(document.getElementById('empSalary').value).toFixed(3);
+            const notes = document.getElementById('empNotes').value.trim();
+
+            if(!name || !branch || !totalHours || !rate) return alert('أكمل بيانات الموزع الأساسية وأجر الساعة.');
+
+            currentEntryRows.push({ name, branch, vehicle, days, hours, totalHours, rate, salary, notes });
+            renderEntryTable();
+            
+            document.getElementById('empName').value = '';
+            document.getElementById('empTotalHours').value = '';
+            document.getElementById('empSalary').value = '';
+            document.getElementById('empNotes').value = '';
+            document.getElementById('empName').focus();
+        }
+
+        function removeRow(index) {
+            currentEntryRows.splice(index, 1); renderEntryTable();
+        }
+
+        function renderEntryTable() {
+            const tbody = document.getElementById('entryTbody');
+            let grandTotal = 0;
+            tbody.innerHTML = currentEntryRows.map((r, i) => {
+                grandTotal += parseFloat(r.salary) || 0;
+                return `<tr>
+                    <td>${i + 1}</td><td>${r.name}</td><td>${r.branch}</td><td>${r.vehicle}</td>
+                    <td>${r.days}</td><td>${r.hours}</td><td style="font-weight:bold;">${r.totalHours}</td>
+                    <td>${r.rate}</td><td style="font-weight:bold; color:var(--danger);">${r.salary}</td>
+                    <td>${r.notes}</td><td><button class="delete-btn" onclick="removeRow(${i})">حذف</button></td>
+                </tr>`;
+            }).join('');
+            document.getElementById('grandTotalSalary').innerText = grandTotal.toFixed(3);
+        }
+
+        function saveRecord() {
+            const company = document.getElementById('regCompany').value;
+            const monthRaw = document.getElementById('regMonth').value;
+
+            if(!company || !monthRaw || currentEntryRows.length === 0) return alert('تأكد من اختيار الشركة والشهر ووجود موزع واحد.');
+
+            const record = {
+                id: editingRecordId || Date.now().toString(),
+                company, monthRaw, monthFormatted: formatMonthName(monthRaw),
+                rows: [...currentEntryRows], grandTotalSalary: document.getElementById('grandTotalSalary').innerText
+            };
+
+            if (editingRecordId) {
+                appData.records[appData.records.findIndex(r => r.id === editingRecordId)] = record;
+            } else {
+                appData.records.push(record);
+            }
+
+            saveState(); alert('تم حفظ الكشف بنجاح!');
+            editingRecordId = null; currentEntryRows = [];
+            document.getElementById('regCompany').value = '';
+            renderEntryTable();
+        }
+
+        // --- Archive & HTML string generation for PDF ---
+        function renderArchive() {
+            document.getElementById('archiveTbody').innerHTML = appData.records.map(r => `
+                <tr>
+                    <td>${r.id.slice(-5)}</td>
+                    <td style="font-weight:bold;">${r.company}</td>
+                    <td>${r.monthFormatted}</td>
+                    <td>${r.rows.length}</td>
+                    <td style="font-weight:bold; color:var(--danger)">${r.grandTotalSalary} د.ك</td>
+                    <td>
+                        <button class="btn btn-edit" style="color:#000" onclick="editRecord('${r.id}')">✏️</button>
+                        <button class="btn btn-danger" onclick="exportSinglePDF('${r.id}')">PDF</button>
+                        <button class="btn btn-success" onclick="exportSingleExcel('${r.id}')">Excel</button>
+                        <button class="btn btn-del" onclick="deleteRecord('${r.id}')">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function editRecord(id) {
+            const r = appData.records.find(x => x.id === id);
+            editingRecordId = r.id;
+            document.getElementById('regCompany').value = r.company;
+            document.getElementById('regMonth').value = r.monthRaw;
+            currentEntryRows = [...r.rows];
+            openTab('entry'); renderEntryTable(); autoFillRate();
+        }
+
+        function deleteRecord(id) {
+            if(confirm('حذف الكشف نهائياً؟')) {
+                appData.records = appData.records.filter(r => r.id !== id);
+                saveState(); renderArchive();
+            }
+        }
+
+        // HTML Generator for PDF Pages
+        function buildPDFPageHTML(r) {
+            const rowsHtml = r.rows.map((row, i) => `
+                <tr>
+                    <td>${i + 1}</td><td>${row.name}</td><td>${row.branch}</td><td>${row.vehicle}</td>
+                    <td>${row.days}</td><td>${row.hours}</td><td style="font-weight:900;">${row.totalHours}</td>
+                    <td>${row.rate}</td><td style="font-weight:900;">${row.salary}</td><td>${row.notes}</td>
+                </tr>
+            `).join('');
+
+            return `
+                <div class="pdf-export-container">
+                    <div class="pdf-header">
+                        <div class="pdf-title-box">
+                            <h2>شركة نايف للأغذية</h2>
+                            <h3>كشف دوام موزعي <span style="color:#7A0E0E">${r.company}</span> عن شهر <span style="color:#7A0E0E">${r.monthFormatted}</span></h3>
+                        </div>
+                        <img src="https://i.postimg.cc/NM2zJWZD/NAIF-LOGO.jpg" alt="Naif Logo" class="pdf-logo" crossorigin="anonymous">
+                    </div>
+                    <table class="pdf-table">
+                        <thead>
+                            <tr>
+                                <th width="5%">م</th><th width="15%">اسم الموزع</th><th width="15%">المطعم</th>
+                                <th width="8%">المركبة</th><th width="8%">أيام</th><th width="8%">الساعات</th>
+                                <th width="10%">إجمالي الساعات</th><th width="8%">أجر الساعة</th><th width="10%">الراتب المستحق</th>
+                                <th width="13%">ملاحظات</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="8" style="text-align: left; padding-left: 20px; font-size: 15px;">الإجمالي الكلي:</th>
+                                <th style="font-size: 15px; color: #000; font-weight: 900;">${r.grandTotalSalary}</th><th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    <div class="pdf-footer">
+                        <div class="pdf-sign-box">إدارة الموارد البشرية</div>
+                        <div class="pdf-sign-box">المدير المالي والاداري</div>
+                        <div class="pdf-sign-box">مدير التشغيل</div>
+                        <div class="pdf-sign-box">نائب المدير العام</div>
+                    </div>
+                    <div class="pdf-credits">مطاعم نايف للأغذية © 2026</div>
+                </div>
+            `;
+        }
+
+        // Export Single PDF
+        function exportSinglePDF(id) {
+            const r = appData.records.find(x => x.id === id);
+            const master = document.getElementById('pdf-template-master');
+            master.innerHTML = buildPDFPageHTML(r);
+            master.style.display = 'block';
+
+            html2pdf().set({
+                margin: 5, filename: `كشف_${r.company}_${r.monthFormatted}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            }).from(master).save().then(() => master.style.display = 'none');
+        }
+
+        // Export Single Excel
+        function exportSingleExcel(id) {
+            const r = appData.records.find(x => x.id === id);
+            const tempTable = document.createElement('table');
+            tempTable.setAttribute('data-cols-width', '5,25,20,15,10,10,15,10,15,20');
+            
+            let html = `<thead><tr><th colspan="10" style="background-color:#9E1B1B; color:#ffffff; font-size:18px; font-weight:bold; text-align:center;">كشف دوام: ${r.company} - شهر ${r.monthFormatted}</th></tr>
+                    <tr><th style="background-color:#D4AF37; font-weight:bold;">م</th><th style="background-color:#D4AF37; font-weight:bold;">اسم الموزع</th><th style="background-color:#D4AF37; font-weight:bold;">المطعم</th><th style="background-color:#D4AF37; font-weight:bold;">المركبة</th><th style="background-color:#D4AF37; font-weight:bold;">أيام</th><th style="background-color:#D4AF37; font-weight:bold;">ساعات</th><th style="background-color:#D4AF37; font-weight:bold;">إجمالي الساعات</th><th style="background-color:#D4AF37; font-weight:bold;">أجر الساعة</th><th style="background-color:#D4AF37; font-weight:bold;">الراتب</th><th style="background-color:#D4AF37; font-weight:bold;">ملاحظات</th></tr></thead><tbody>`;
+            
+            r.rows.forEach((row, i) => { html += `<tr><td>${i+1}</td><td>${row.name}</td><td>${row.branch}</td><td>${row.vehicle}</td><td>${row.days}</td><td>${row.hours}</td><td>${row.totalHours}</td><td>${row.rate}</td><td>${row.salary}</td><td>${row.notes}</td></tr>`; });
+            html += `<tr><th colspan="8" style="background-color:#f1f1f1; font-weight:bold; color:#9E1B1B;">الإجمالي الكلي:</th><th style="background-color:#f1f1f1; font-weight:bold; color:#dc3545;">${r.grandTotalSalary}</th><th></th></tr></tbody>`;
+            
+            tempTable.innerHTML = html; document.body.appendChild(tempTable);
+            TableToExcel.convert(tempTable, { name: `Excel_${r.company}_${r.monthFormatted}.xlsx`, sheet: { name: "الكشف" } });
+            document.body.removeChild(tempTable);
+        }
+
+        // --- Bulk Export Functions ---
+        function exportBulkPDF(mode) {
+            const monthRaw = document.getElementById('bulkMonth').value;
+            const records = appData.records.filter(r => r.monthRaw === monthRaw);
+            if(!records.length) return alert('لا توجد بيانات مسجلة لهذا الشهر.');
+
+            if(mode === 'separate') {
+                // Export separate files with a slight delay
+                records.forEach((r, i) => {
+                    setTimeout(() => exportSinglePDF(r.id), i * 1500);
+                });
+                alert('جاري تنزيل الملفات تباعاً، يرجى السماح للمتصفح بتنزيل عدة ملفات إذا طلب ذلك.');
+            } else {
+                // Combine all into ONE PDF
+                const master = document.getElementById('pdf-template-master');
+                let combinedHtml = '';
+                records.forEach((r, i) => {
+                    combinedHtml += buildPDFPageHTML(r);
+                    if(i < records.length - 1) combinedHtml += '<div class="page-break"></div>';
+                });
+                master.innerHTML = combinedHtml;
+                master.style.display = 'block';
+
+                html2pdf().set({
+                    margin: 5, filename: `كشوفات_كل_الشركات_${records[0].monthFormatted}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                }).from(master).save().then(() => master.style.display = 'none');
+            }
+        }
+
+        // Bulk Excel using SheetJS (Multi-Sheet)
+        function exportBulkExcel() {
+            const monthRaw = document.getElementById('bulkMonth').value;
+            const records = appData.records.filter(r => r.monthRaw === monthRaw);
+            if(!records.length) return alert('لا توجد بيانات مسجلة لهذا الشهر.');
+
+            const wb = XLSX.utils.book_new();
+
+            records.forEach(r => {
+                // Prepare Array of Arrays for SheetJS
+                const wsData = [
+                    [`كشف دوام: ${r.company} - شهر ${r.monthFormatted}`],
+                    ["م", "اسم الموزع", "المطعم", "المركبة", "أيام الدوام", "ساعات", "إجمالي الساعات", "أجر الساعة", "الراتب المستحق", "ملاحظات"]
+                ];
+
+                r.rows.forEach((row, i) => {
+                    wsData.push([i+1, row.name, row.branch, row.vehicle, row.days, row.hours, row.totalHours, row.rate, row.salary, row.notes]);
+                });
+
+                wsData.push(["", "", "", "", "", "", "", "الإجمالي الكلي:", r.grandTotalSalary, ""]);
+
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                
+                // Set column widths
+                ws['!cols'] = [{wch: 5}, {wch: 25}, {wch: 20}, {wch: 15}, {wch: 10}, {wch: 10}, {wch: 15}, {wch: 12}, {wch: 15}, {wch: 20}];
+
+                // Clean company name for sheet tab (Excel limit 31 chars, no illegal chars)
+                let safeSheetName = r.company.replace(/[\\/*?:\[\]]/g, '').substring(0, 31);
+                
+                // Prevent duplicate sheet names
+                if(wb.SheetNames.includes(safeSheetName)) safeSheetName += `_${r.id.slice(-3)}`;
+
+                XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
+            });
+
+            XLSX.writeFile(wb, `كشوفات_كل_الشركات_${records[0].monthFormatted}.xlsx`);
+        }
+
+        // --- Reports Functions ---
+        let currentReportData = { branch: '', monthStr: '', title: '' };
+
+        function generateBranchReport() {
+            const branch = document.getElementById('reportBranch').value;
+            const monthRaw = document.getElementById('reportMonth').value;
+            if(!branch || !monthRaw) return alert('اختر المطعم والشهر أولاً');
+
+            const monthStr = formatMonthName(monthRaw);
+            currentReportData = { branch, monthStr, title: `تقرير رواتب موزعين (${branch}) لشهر ${monthStr}` };
+
+            document.getElementById('reportTableTitle').innerText = currentReportData.title;
+            
+            let filteredRows = [];
+            let grandTotal = 0;
+
+            appData.records.forEach(r => {
+                if(r.monthRaw === monthRaw) {
+                    r.rows.forEach(row => {
+                        if(row.branch === branch) {
+                            filteredRows.push({...row, companyName: r.company});
+                            grandTotal += parseFloat(row.salary) || 0;
+                        }
+                    });
+                }
+            });
+
+            if(filteredRows.length === 0) {
+                alert('لا توجد بيانات مسجلة لهذا المطعم في الشهر المحدد.');
+                document.getElementById('reportResultArea').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('reportTbody').innerHTML = filteredRows.map((row, i) => `
+                <tr>
+                    <td>${i+1}</td>
+                    <td style="font-weight:bold;">${row.name}</td>
+                    <td>${row.companyName}</td>
+                    <td>${row.vehicle}</td>
+                    <td>${row.days}</td>
+                    <td style="font-weight:bold;">${row.totalHours}</td>
+                    <td>${row.rate}</td>
+                    <td style="font-weight:bold; color:var(--danger);">${row.salary}</td>
+                    <td>${row.notes}</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('reportGrandTotal').innerText = grandTotal.toFixed(3);
+            document.getElementById('reportResultArea').style.display = 'block';
+        }
+
+        function exportReportExcel() {
+            let table = document.getElementById('reportExportTable');
+            TableToExcel.convert(table, { name: `${currentReportData.title}.xlsx`, sheet: { name: "التقرير" } });
+        }
+
+        function exportReportPDF() {
+            const element = document.createElement('div');
+            element.className = 'pdf-export-container';
+            element.innerHTML = `
+                <div class="pdf-header">
+                    <div class="pdf-title-box">
+                        <h2>شركة نايف للأغذية</h2>
+                        <h3>${currentReportData.title}</h3>
+                    </div>
+                    <img src="https://i.postimg.cc/NM2zJWZD/NAIF-LOGO.jpg" alt="Naif Logo" class="pdf-logo" crossorigin="anonymous">
+                </div>
+                ${document.getElementById('reportTableContainer').innerHTML}
+                <div class="pdf-footer" style="margin-top: 50px;">
+                    <div class="pdf-sign-box">إدارة الموارد البشرية</div>
+                    <div class="pdf-sign-box">المدير المالي والاداري</div>
+                    <div class="pdf-sign-box">مدير التشغيل</div>
+                    <div class="pdf-sign-box">نائب المدير العام</div>
+                </div>
+                <div class="pdf-credits" style="margin-top:30px;">تقرير نظام إدارة الموزعين | مطاعم نايف للأغذية © 2026</div>
+            `;
+            const ths = element.querySelectorAll('th');
+            ths.forEach(th => { th.style.backgroundColor = '#f2f2f2'; th.style.color = '#000'; });
+
+            document.body.appendChild(element);
+            
+            html2pdf().set({
+                margin: 5, filename: `${currentReportData.title}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            }).from(element).save().then(() => document.body.removeChild(element));
+        }
+
+        function clearAllData() {
+            if(confirm('تحذير خطير: مسح جميع البيانات سيعيد البرنامج لضبط المصنع ويحذف كافة الكشوفات!')) {
+                localStorage.clear(); location.reload(); 
+            }
+        }
+    </script>
+</body>
+</html>
