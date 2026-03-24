@@ -103,20 +103,19 @@
         .pdf-export-container { width: 950px; padding: 25px; background: white; font-family: 'Cairo', sans-serif; direction: rtl; color: black; margin: 0 auto;}
         
         .pdf-header { display: flex; justify-content: center; align-items: center; margin-bottom: 15px; position: relative; }
-        .pdf-logo { position: absolute; right: 0; top: 0; width: 100px; height: 100px; object-fit: contain;}
+        .pdf-logo { position: absolute; right: 0; top: 0; width: 50px; height: 50px; object-fit: contain;} /* تصغير الشعار للنصف */
         .pdf-title-box { text-align: center; }
         .pdf-title-box h2 { color: #000; margin: 0; font-size: 22px; font-weight: 900;}
         .pdf-title-box h3 { color: #000; margin: 8px 0 0 0; font-size: 18px; }
         
         .pdf-table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 15px; text-align: center;}
-        /* Reduced row height in PDF */
-        .pdf-table th, .pdf-table td { border: 1px solid #000; padding: 5px 3px; font-size: 13px; }
+        /* تقليل ارتفاع الصفوف وزيادة حجم الخط بنسبة 5% تقريباً */
+        .pdf-table th, .pdf-table td { border: 1px solid #000; padding: 4px 2px; font-size: 13.5px; }
         /* Enforce background colors for printing */
         .pdf-table th { background-color: #f2f2f2 !important; font-weight: 900; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .pdf-table td { font-weight: 600; }
         
         .pdf-footer { display: flex; justify-content: space-between; margin-top: 50px; text-align: center; font-weight: bold; }
-        /* Updated 4 signatures layout */
         .pdf-sign-box { width: 22%; border-top: 2px dotted #000; padding-top: 8px; font-size: 14px;}
         .pdf-credits { text-align: center; font-size: 11px; color: #555; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;}
         
@@ -154,7 +153,7 @@
                 <div class="row">
                     <div class="col form-group">
                         <label>الشركة الخارجية</label>
-                        <input type="text" id="regCompany" class="form-control" list="companiesList" placeholder="اختر أو ابحث عن الشركة..." onchange="autoFillRate()">
+                        <input type="text" id="regCompany" class="form-control" list="companiesList" placeholder="اختر أو ابحث عن الشركة..." onchange="autoFillRate(); updateEmployeeDatalist();">
                     </div>
                     <div class="col form-group">
                         <label>شهر الدوام</label>
@@ -168,7 +167,7 @@
                 <div class="row" style="background: #fdfbf7; padding: 20px; border-radius: 8px; border: 1px dashed var(--gold); align-items: flex-end;">
                     <div class="form-group" style="flex: 2; min-width: 200px;">
                         <label>اسم الموزع</label>
-                        <input type="text" id="empName" class="form-control" placeholder="اكتب اسم الموزع...">
+                        <input type="text" id="empName" class="form-control" list="employeeList" placeholder="اكتب اسم الموزع...">
                     </div>
                     <div class="form-group" style="flex: 2; min-width: 200px;">
                         <label>اسم المطعم</label>
@@ -373,6 +372,8 @@
 
     <datalist id="companiesList"></datalist>
     <datalist id="branchesList"></datalist>
+    <!-- Datalist خاص بأسماء الموزعين المرتبطة بالشركة -->
+    <datalist id="employeeList"></datalist>
 
     <div class="export-wrapper" id="pdf-template-master">
         </div>
@@ -411,12 +412,16 @@
             records: JSON.parse(localStorage.getItem('naif_recs_v4')) || []
         };
 
+        // هيكل لتخزين أسماء الموزعين لكل شركة
+        let employeesByCompany = JSON.parse(localStorage.getItem('naif_empByComp_v4')) || {};
+
         let currentEntryRows = [];
         let editingRecordId = null;
 
         // --- Init ---
         window.onload = () => {
-            saveState(); 
+            rebuildEmployeesByCompanyFromRecords(); // بناء قائمة الموظفين من السجلات القديمة
+            saveAllState(); 
             updateDatalists();
             renderSettings();
             renderArchive();
@@ -428,10 +433,48 @@
             document.getElementById('bulkMonth').value = currMonth;
         };
 
-        function saveState() {
+        function saveAllState() {
             localStorage.setItem('naif_comps_v4', JSON.stringify(appData.companies));
             localStorage.setItem('naif_brns_v4', JSON.stringify(appData.branches));
             localStorage.setItem('naif_recs_v4', JSON.stringify(appData.records));
+            localStorage.setItem('naif_empByComp_v4', JSON.stringify(employeesByCompany));
+        }
+
+        // بناء employeesByCompany من السجلات المحفوظة
+        function rebuildEmployeesByCompanyFromRecords() {
+            employeesByCompany = {};
+            appData.records.forEach(rec => {
+                const company = rec.company;
+                if (!employeesByCompany[company]) employeesByCompany[company] = [];
+                rec.rows.forEach(row => {
+                    const name = row.name;
+                    if (name && !employeesByCompany[company].includes(name)) {
+                        employeesByCompany[company].push(name);
+                    }
+                });
+            });
+        }
+
+        // تحديث قائمة الموظفين (datalist) حسب الشركة المختارة
+        function updateEmployeeDatalist() {
+            const company = document.getElementById('regCompany').value;
+            const empList = employeesByCompany[company] || [];
+            const datalist = document.getElementById('employeeList');
+            datalist.innerHTML = empList.map(name => `<option value="${name}">`).join('');
+        }
+
+        // إضافة موظف جديد لقائمة الشركة إذا لم يكن موجوداً
+        function ensureEmployeeInCompany(company, employeeName) {
+            if (!company || !employeeName) return;
+            if (!employeesByCompany[company]) employeesByCompany[company] = [];
+            if (!employeesByCompany[company].includes(employeeName)) {
+                employeesByCompany[company].push(employeeName);
+                saveAllState();
+                // إذا كانت هذه الشركة هي المحددة حالياً، نحدث القائمة المنسدلة
+                if (document.getElementById('regCompany').value === company) {
+                    updateEmployeeDatalist();
+                }
+            }
         }
 
         function formatMonthName(mStr) {
@@ -506,6 +549,11 @@
                 if (idx !== -1) {
                     appData.companies[idx] = { name: newName, rateCar: rCar, rateBike: rBike };
                     appData.records.forEach(r => { if(r.company === oldName) r.company = newName; });
+                    // تحديث employeesByCompany إذا تغير اسم الشركة
+                    if (oldName !== newName && employeesByCompany[oldName]) {
+                        employeesByCompany[newName] = employeesByCompany[oldName];
+                        delete employeesByCompany[oldName];
+                    }
                 }
             } else {
                 if(appData.companies.find(c => c.name === newName)) return alert('الشركة موجودة مسبقاً!');
@@ -518,13 +566,14 @@
             document.getElementById('setCompBike').value = '1.000';
             document.getElementById('btnSaveComp').innerText = 'إضافة / تحديث';
             
-            saveState(); updateDatalists(); renderSettings(); autoFillRate();
+            saveAllState(); updateDatalists(); renderSettings(); autoFillRate(); updateEmployeeDatalist();
         }
 
         function deleteCompany(name) {
             if(confirm('حذف الشركة؟')) {
                 appData.companies = appData.companies.filter(c => c.name !== name);
-                saveState(); updateDatalists(); renderSettings();
+                delete employeesByCompany[name];
+                saveAllState(); updateDatalists(); renderSettings();
             }
         }
 
@@ -556,13 +605,13 @@
             document.getElementById('setBranchOldName').value = '';
             document.getElementById('setBranchName').value = '';
             document.getElementById('btnSaveBranch').innerText = 'حفظ';
-            saveState(); updateDatalists(); renderSettings();
+            saveAllState(); updateDatalists(); renderSettings();
         }
 
         function deleteBranch(name) {
             if(confirm('حذف المطعم؟')) {
                 appData.branches = appData.branches.filter(b => b !== name);
-                saveState(); updateDatalists(); renderSettings();
+                saveAllState(); updateDatalists(); renderSettings();
             }
         }
 
@@ -605,17 +654,46 @@
             const rate = parseFloat(document.getElementById('empRate').value).toFixed(3);
             const salary = parseFloat(document.getElementById('empSalary').value).toFixed(3);
             const notes = document.getElementById('empNotes').value.trim();
+            const company = document.getElementById('regCompany').value;
 
             if(!name || !branch || !totalHours || !rate) return alert('أكمل بيانات الموزع الأساسية وأجر الساعة.');
+            if(!company) return alert('اختر الشركة أولاً.');
+
+            // إضافة الموظف لقائمة الشركة إذا كان جديداً
+            ensureEmployeeInCompany(company, name);
 
             currentEntryRows.push({ name, branch, vehicle, days, hours, totalHours, rate, salary, notes });
             renderEntryTable();
             
+            // مسح الحقول مع الإبقاء على أيام وساعات الدوام
             document.getElementById('empName').value = '';
             document.getElementById('empTotalHours').value = '';
             document.getElementById('empSalary').value = '';
             document.getElementById('empNotes').value = '';
             document.getElementById('empName').focus();
+
+            // إعادة حساب إجمالي الساعات والراتب بناءً على أيام وساعات الدوام الحالية
+            calculateRow(false);
+        }
+
+        // تعديل صف: تعبئة النموذج بالبيانات وحذف الصف من القائمة
+        function editRow(index) {
+            const row = currentEntryRows[index];
+            document.getElementById('empName').value = row.name;
+            document.getElementById('empBranch').value = row.branch;
+            document.getElementById('empVehicle').value = row.vehicle;
+            document.getElementById('empDays').value = row.days;
+            document.getElementById('empHours').value = row.hours;
+            document.getElementById('empTotalHours').value = row.totalHours;
+            document.getElementById('empRate').value = row.rate;
+            document.getElementById('empSalary').value = row.salary;
+            document.getElementById('empNotes').value = row.notes;
+
+            // حذف الصف من القائمة
+            currentEntryRows.splice(index, 1);
+            renderEntryTable();
+            // إعادة حساب أي شيء ضروري (الراتب قديم لكنه سيبقى)
+            calculateRow(true);
         }
 
         function removeRow(index) {
@@ -631,7 +709,11 @@
                     <td>${i + 1}</td><td>${r.name}</td><td>${r.branch}</td><td>${r.vehicle}</td>
                     <td>${r.days}</td><td>${r.hours}</td><td style="font-weight:bold;">${r.totalHours}</td>
                     <td>${r.rate}</td><td style="font-weight:bold; color:var(--danger);">${r.salary}</td>
-                    <td>${r.notes}</td><td><button class="delete-btn" onclick="removeRow(${i})">حذف</button></td>
+                    <td>${r.notes}</td>
+                    <td>
+                        <button class="btn-edit" onclick="editRow(${i})" style="padding:4px 8px;">✏️</button>
+                        <button class="btn-del" onclick="removeRow(${i})" style="padding:4px 8px;">🗑️</button>
+                    </td>
                 </tr>`;
             }).join('');
             document.getElementById('grandTotalSalary').innerText = grandTotal.toFixed(3);
@@ -642,6 +724,9 @@
             const monthRaw = document.getElementById('regMonth').value;
 
             if(!company || !monthRaw || currentEntryRows.length === 0) return alert('تأكد من اختيار الشركة والشهر ووجود موزع واحد.');
+
+            // التأكد من أن جميع أسماء الموزعين في هذا الكشف موجودة بقائمة الشركة
+            currentEntryRows.forEach(row => ensureEmployeeInCompany(company, row.name));
 
             const record = {
                 id: editingRecordId || Date.now().toString(),
@@ -655,7 +740,10 @@
                 appData.records.push(record);
             }
 
-            saveState(); alert('تم حفظ الكشف بنجاح!');
+            // إعادة بناء employeesByCompany من السجلات (للحصول على أي أسماء جديدة)
+            rebuildEmployeesByCompanyFromRecords();
+
+            saveAllState(); alert('تم حفظ الكشف بنجاح!');
             editingRecordId = null; currentEntryRows = [];
             document.getElementById('regCompany').value = '';
             renderEntryTable();
@@ -686,13 +774,14 @@
             document.getElementById('regCompany').value = r.company;
             document.getElementById('regMonth').value = r.monthRaw;
             currentEntryRows = [...r.rows];
-            openTab('entry'); renderEntryTable(); autoFillRate();
+            openTab('entry'); renderEntryTable(); autoFillRate(); updateEmployeeDatalist();
         }
 
         function deleteRecord(id) {
             if(confirm('حذف الكشف نهائياً؟')) {
                 appData.records = appData.records.filter(r => r.id !== id);
-                saveState(); renderArchive();
+                rebuildEmployeesByCompanyFromRecords(); // إعادة بناء قائمة الموظفين بعد الحذف
+                saveAllState(); renderArchive();
             }
         }
 
@@ -902,6 +991,14 @@
         function exportReportPDF() {
             const element = document.createElement('div');
             element.className = 'pdf-export-container';
+            
+            // نأخذ محتوى الجدول ولكن نحذف الصف الأول من thead (عنوان التقرير) لتجنب الازدواج
+            const tableClone = document.getElementById('reportExportTable').cloneNode(true);
+            const thead = tableClone.querySelector('thead');
+            if (thead && thead.rows.length > 0) {
+                thead.deleteRow(0); // حذف الصف الأول الذي يحوي العنوان
+            }
+            
             element.innerHTML = `
                 <div class="pdf-header">
                     <div class="pdf-title-box">
@@ -910,7 +1007,7 @@
                     </div>
                     <img src="https://i.postimg.cc/NM2zJWZD/NAIF-LOGO.jpg" alt="Naif Logo" class="pdf-logo" crossorigin="anonymous">
                 </div>
-                ${document.getElementById('reportTableContainer').innerHTML}
+                ${tableClone.outerHTML}
                 <div class="pdf-footer" style="margin-top: 50px;">
                     <div class="pdf-sign-box">إدارة الموارد البشرية</div>
                     <div class="pdf-sign-box">المدير المالي والاداري</div>
@@ -919,9 +1016,7 @@
                 </div>
                 <div class="pdf-credits" style="margin-top:30px;">تقرير نظام إدارة الموزعين | مطاعم نايف للأغذية © 2026</div>
             `;
-            const ths = element.querySelectorAll('th');
-            ths.forEach(th => { th.style.backgroundColor = '#f2f2f2'; th.style.color = '#000'; });
-
+            
             document.body.appendChild(element);
             
             html2pdf().set({
